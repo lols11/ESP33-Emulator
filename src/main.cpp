@@ -13,7 +13,7 @@
     This project aims to make TRW450 ABS friends with PLA 3.0 in
     VW47x(PQ46) platform by emulating missing ESP_33 CAN message.
 
-    NOTE: This software is intended for OFF-ROAD USE ONLY.
+    CAUTION: This software is intended for OFF-ROAD USE ONLY.
 */
 
 #include <Arduino.h>
