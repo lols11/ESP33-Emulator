@@ -10,10 +10,10 @@
 */
 
 /*
-    This project aims to make TRW450 ABS friends with PLA 3.0 in 
+    This project aims to make TRW450 ABS friends with PLA 3.0 in
     VW47x(PQ46) platform by emulating missing ESP_33 CAN message.
 
-    NOTE: This software is intended for OFFROAD USE ONLY.
+    NOTE: This software is intended for OFF-ROAD USE ONLY.
 */
 
 #include <Arduino.h>
@@ -22,12 +22,11 @@
 #include <avr/wdt.h>
 #define DEVELOPMENT_MODE true
 
-    const unsigned int ESP_33_CAN_ID = 0x1AB;
+const unsigned int ESP_33_CAN_ID = 0x1AB;
 const unsigned int ESP_33_BROADCAST_TIME_MS = 200; // Standard time for this signal
-const byte ESP_33_MAX_RETRY_COUNT = 7;     // After failed attempts arduino will reboot
+const byte ESP_33_MAX_RETRY_COUNT = 7;             // After failed attempts arduino will reboot
 
-
-boolean CycleThroughESP_33_BZ = false;
+// boolean CycleThroughESP_33_BZ = true;
 unsigned long currentTime = 0, lastSendTime = 0;
 byte canStatus = CAN_FAILINIT;
 byte failedRetryCount = 0;
@@ -38,13 +37,13 @@ void (*reboot)(void) = 0;
 
 uint8_t esp_33[8] = {
     0x00,       // ESP_33_CHK (XOR-2 CS)
-    0b00001111, // ESP_33_BZ (0-15DEC)
-    0x00,       // ESC_Warnruck_aktiv; ESC_Warnruck_nicht_verfuegbar
+    0b00000000, // ESP_33_BZ (Counter 0-15DEC)
+    0x00,       // [UNUSED] ESC_Warnruck_aktiv; ESC_Warnruck_nicht_verfuegbar
     0x00,       // ESC_Prefill_aktiv; ESC_Prefill_nicht_verfuegbar; ESC_HBA_aktiv; ESC_HBA_nicht_verfuegbar; ESC_Verz_Reg_aktiv
     0b00000000, // ESC_Verz_Reg_nicht_verfuegbar; ESC_Verz_Reg_TB_nicht_verfuegbar; ESC_Verz_Reg_ZB_nicht_verfuegbar; ESC_Konsistenz_ACC; ESC_Konsistenz_AWV
-    0x00,       // ESC_Konsistenz_RCTA
+    0x00,       // [UNUSED] ESC_Konsistenz_RCTA
     0x00,       // ESC_Fahrer_Bremsdruck_bestimmend; ESC_Konsistenz_MKB
-    0x00        // Unused
+    0x00        // [UNUSED]
 };
 
 static uint8_t getESP_33_BZ()
@@ -66,7 +65,7 @@ static void setESP_33_BZ(uint8_t value)
     Serial.println(value);
 }
 
-static void cycleESP_33_BZ()
+static void addToCounterESP_33_BZ()
 {
     uint8_t actualValue = getESP_33_BZ();
     if (actualValue == 15)
@@ -111,8 +110,7 @@ unsigned int xor_checksum(const uint8_t *d)
 boolean sendESP_33()
 {
 
-    if (CycleThroughESP_33_BZ)
-        cycleESP_33_BZ();
+    addToCounterESP_33_BZ();
 
     esp_33[0] = xor_checksum(esp_33);
     byte status = CAN0.sendMsgBuf(ESP_33_CAN_ID, 0, 8, esp_33);
@@ -129,21 +127,21 @@ void printHelp()
     Serial.println(F("S. Status"));
     Serial.println(F("1. Manual set ESP_33_BZ (0-15DEC)"));
     Serial.println(F("2. Cycle through ESP_33_BZ"));
-    Serial.println(F("3. Set ESC_Warnruck_aktiv (0-9)"));
-    Serial.println(F("4. Set ESC_Warnruck_nicht_verfuegbar (0-1)"));
+    //  Serial.println(F("3. Set ESC_Warnruck_aktiv (0-9)"));
+    //   Serial.println(F("4. Set ESC_Warnruck_nicht_verfuegbar (0-1)"));
     Serial.println(F("5. Set ESC_Prefill_aktiv (0-1)"));
-    Serial.println(F("6. Set ESC_Prefill_nicht_verfuegbar (0-1)"));
-    Serial.println(F("7. Set ESC_HBA_aktiv (0-1)"));
-    Serial.println(F("8. Set ESC_HBA_nicht_verfuegbar (0-1)"));
+    // Serial.println(F("6. Set ESC_Prefill_nicht_verfuegbar (0-1)"));
+    // Serial.println(F("7. Set ESC_HBA_aktiv (0-1)"));
+    //   Serial.println(F("8. Set ESC_HBA_nicht_verfuegbar (0-1)"));
     Serial.println(F("9. Set ESC_Verz_Reg_aktiv (0-15)"));
     Serial.println(F("10. Set ESC_Verz_Reg_nicht_verfuegbar (0-1)"));
-    Serial.println(F("11. Set ESC_Verz_Reg_TB_nicht_verfuegbar (0-1)"));
-    Serial.println(F("12. Set ESC_Verz_Reg_ZB_nicht_verfuegbar (0-1)"));
-    Serial.println(F("13. Set ESC_Konsistenz_ACC (0-1)"));
-    Serial.println(F("14. Set ESC_Konsistenz_AWV (0-1)"));
-    Serial.println(F("15. Set ESC_Konsistenz_RCTA (0-1)"));
+    //  Serial.println(F("11. Set ESC_Verz_Reg_TB_nicht_verfuegbar (0-1)"));
+    // Serial.println(F("12. Set ESC_Verz_Reg_ZB_nicht_verfuegbar (0-1)"));
+    // Serial.println(F("13. Set ESC_Konsistenz_ACC (0-1)"));
+    // Serial.println(F("14. Set ESC_Konsistenz_AWV (0-1)"));
+    // Serial.println(F("15. Set ESC_Konsistenz_RCTA (0-1)"));
     Serial.println(F("16. Set ESC_Fahrer_Bremsdruck_bestimmend (0-1)"));
-    Serial.println(F("17. Set ESC_Konsistenz_MKB (0-1)"));
+    //  Serial.println(F("17. Set ESC_Konsistenz_MKB (0-1)"));
 }
 
 void handleSerialInput()
@@ -160,7 +158,6 @@ void handleSerialInput()
     if (command.equalsIgnoreCase("S"))
     {
         Serial.println("ESP_33_BZ: " + getESP_33_BZ());
-        Serial.println("CycleThroughESP_33_BZ: " + CycleThroughESP_33_BZ);
         Serial.println("ESC_Warnruck_aktiv: " + getESC_Warnruck_aktiv());
 
         return;
@@ -178,12 +175,12 @@ void handleSerialInput()
         Serial.println("ok");
         return;
     }
-    if (command.startsWith("2"))
-    {
-        CycleThroughESP_33_BZ = !CycleThroughESP_33_BZ;
-        Serial.println("CycleThroughESP_33_BZ set to: " + CycleThroughESP_33_BZ);
-        return;
-    }
+    //  if (command.startsWith("2"))
+    //  {
+    //     CycleThroughESP_33_BZ = !CycleThroughESP_33_BZ;
+    //     Serial.println("CycleThroughESP_33_BZ set to: " + CycleThroughESP_33_BZ);
+    //    return;
+    // }
     if (command.startsWith("3"))
     {
         Serial.println(F("Wirte value 0-9: "));
@@ -208,7 +205,7 @@ void handleSerialInput()
 
 void setup()
 {
-    // Should be enough time to work and not to overload the canbus or trigger DTC due to missing message 
+    // Should be enough time to work and not to overload the canbus or trigger DTC due to missing message
     // as timeout for this signal is probably smth. like 2000ms
     // Probably can be set even lower as ESP_33 is sent also when onChange event occurs with min. timeout 20ms.
     wdt_enable(WDTO_500MS);
@@ -247,7 +244,7 @@ void loop()
     }
     else
     {
-        failedRetryCount = 0; 
+        failedRetryCount = 0;
     }
 
     lastSendTime = currentTime;
