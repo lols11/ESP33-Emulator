@@ -21,6 +21,7 @@
 #include <SPI.h>
 #include <avr/wdt.h>
 #define DEVELOPMENT_MODE true
+#define WATCHDOG_TIMEOUT WDTO_500MS
 
 const unsigned int ESP_33_CAN_ID = 0x1AB;
 const unsigned int ESP_33_BROADCAST_TIME_MS = 200; // Standard time for this signal
@@ -45,6 +46,61 @@ uint8_t esp_33[8] = {
     0x00,       // ESC_Fahrer_Bremsdruck_bestimmend; ESC_Konsistenz_MKB
     0x00        // [UNUSED]
 };
+
+static boolean getESC_Fahrer_Bremsdruck_bestimmend()
+{
+
+    return (esp_33[7] & 0b00000001) != 0;
+}
+
+static void setESC_Fahrer_Bremsdruck_bestimmend(boolean value)
+{
+    if (value)
+    {
+        esp_33[7] |= 0b00000001;
+        return;
+    }
+
+    esp_33[7] &= 0b11111110;
+}
+
+static boolean getESC_Verz_Reg_nicht_verfuegbar()
+{
+    return (esp_33[5] & 0b00000100) != 0;
+}
+
+static void setESC_Verz_Reg_nicht_verfuegbar(boolean value)
+{
+    if (value)
+    {
+
+        esp_33[5] |= 0b00000100;
+        return;
+    }
+
+    esp_33[5] &= 0b11111011;
+}
+
+static uint8_t getESC_Verz_Reg_aktiv()
+{
+    // Pobiera wartość bitów 4-7 w bajcie 4
+    return (esp_33[4] & 0b11110000) >> 4;
+}
+
+static void setESC_Verz_Reg_aktiv(uint8_t value)
+{
+    if (value > 15) // Maksymalna wartość dla 4-bitowego pola
+    {
+        Serial.println("ESC_Verz_Reg_aktiv: Value out of range (0-15).");
+        return;
+    }
+
+    // Wyczyszczenie bitów 4-7
+    esp_33[4] &= 0b00001111;
+
+    // Ustawienie nowej wartości na bitach 4-7
+    esp_33[4] |= (value << 4);
+}
 
 static uint8_t getESP_33_BZ()
 {
@@ -95,6 +151,22 @@ static void setESC_Warnruck_aktiv(uint8_t value)
     Serial.println(value);
 }
 
+static boolean getESC_Prefill_aktiv()
+{
+    return (esp_33[4] & 0b00000001) != 0;
+}
+
+static void setESC_Prefill_aktiv(boolean value)
+{
+    if (value)
+    {
+        esp_33[4] |= 0b00000001;
+        return;
+    }
+
+    esp_33[4] &= 0b11111110;
+}
+
 unsigned int xor_checksum(const uint8_t *d)
 {
     uint8_t checksum = 0;
@@ -125,8 +197,8 @@ void printHelp()
     Serial.println(F("WARNING! As settings wait for input it may\ngenerate DTC errors"));
     Serial.println(F("H. Help"));
     Serial.println(F("S. Status"));
-    Serial.println(F("1. Manual set ESP_33_BZ (0-15DEC)"));
-    Serial.println(F("2. Cycle through ESP_33_BZ"));
+    // Serial.println(F("1. Manual set ESP_33_BZ (0-15DEC)"));
+    // Serial.println(F("2. Cycle through ESP_33_BZ"));
     //  Serial.println(F("3. Set ESC_Warnruck_aktiv (0-9)"));
     //   Serial.println(F("4. Set ESC_Warnruck_nicht_verfuegbar (0-1)"));
     Serial.println(F("5. Set ESC_Prefill_aktiv (0-1)"));
@@ -157,9 +229,13 @@ void handleSerialInput()
 
     if (command.equalsIgnoreCase("S"))
     {
+        Serial.println("ESP_33_CHK: " + xor_checksum(esp_33));
         Serial.println("ESP_33_BZ: " + getESP_33_BZ());
         Serial.println("ESC_Warnruck_aktiv: " + getESC_Warnruck_aktiv());
-
+        Serial.println("ESC_Prefill_aktiv: " + getESC_Prefill_aktiv());
+        Serial.println("ESC_Verz_Reg_aktiv: " + getESC_Verz_Reg_aktiv());
+        Serial.println("ESC_Verz_Reg_nicht_verfuegbar: " + getESC_Verz_Reg_nicht_verfuegbar());
+        Serial.println("ESC_Fahrer_Bremsdruck_bestimmend: " + getESC_Fahrer_Bremsdruck_bestimmend());
         return;
     }
 
@@ -200,15 +276,65 @@ void handleSerialInput()
             ;
         }
         setESC_Warnruck_aktiv(Serial.read());
+        return;
+    }
+
+    if (command.startsWith("5"))
+    {
+        bool status = !getESC_Prefill_aktiv();
+        Serial.println("ESC_Prefill_aktiv set to: " + status);
+        setESC_Prefill_aktiv(status);
+        return;
+    }
+
+    if (command.startsWith("9"))
+    {
+        Serial.println(F("0: keine_Aktivitaet"));
+        Serial.println(F("1: Aktivitaet_TB_durch_AWV"));
+        Serial.println(F("2: Aktivitaet_ZB_durch_AWV"));
+        Serial.println(F("3: Aktivitaet_durch_vFGS"));
+        Serial.println(F("4: Aktivitaet_durch_TSK"));
+        Serial.println(F("5: Aktivitaet_durch_RCTA"));
+        Serial.println(F("6: Aktivitaet_durch_PLA_IPA"));
+        Serial.println(F("7: Aktivitaet_durch_STA"));
+        Serial.println(F("8: Aktivitaet_durch_ARA"));
+        Serial.println(F("9: Aktivitaet_durch_MKB"));
+        Serial.println(F("10: Aktivitaet_durch_BFF"));
+        Serial.println(F("11: Aktivitaet_durch_EA"));
+        Serial.println(F("12: Aktivitaet_durch_PCF"));
+        Serial.println(F("13: reserviert"));
+        Serial.println(F("14: Initialisierung"));
+
+        while (Serial.available() == 0)
+        {
+            ;
+        }
+        setESC_Verz_Reg_aktiv(Serial.read());
+        return;
+    }
+
+    if (command.startsWith("10"))
+    {
+        bool status = !getESC_Verz_Reg_nicht_verfuegbar();
+        Serial.println("ESC_Verz_Reg_TB_nicht_verfuegbar set to: " + status);
+        setESC_Verz_Reg_nicht_verfuegbar(status);
+        return;
+    }
+
+    if (command.startsWith("16"))
+    {
+        bool status = !getESC_Fahrer_Bremsdruck_bestimmend();
+        Serial.println("ESC_Fahrer_Bremsdruck_bestimmend set to: " + status);
+        setESC_Fahrer_Bremsdruck_bestimmend(status);
+        return;
     }
 }
-
 void setup()
 {
     // Should be enough time to work and not to overload the canbus or trigger DTC due to missing message
     // as timeout for this signal is probably smth. like 2000ms
     // Probably can be set even lower as ESP_33 is sent also when onChange event occurs with min. timeout 20ms.
-    wdt_enable(WDTO_500MS);
+    wdt_enable(WATCHDOG_TIMEOUT);
 
     canStatus = CAN0.begin(MCP_ANY, CAN_500KBPS, MCP_16MHZ);
 
