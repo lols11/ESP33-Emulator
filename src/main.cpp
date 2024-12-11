@@ -20,13 +20,21 @@
 #include <mcp_can.h>
 #include <SPI.h>
 #include <avr/wdt.h>
+
 #define DEVELOPMENT_MODE true
+
+// Should be enough time to work and not to overload the canbus or trigger DTC due to missing message
+// as timeout for this signal is probably smth. like 2000ms
+// Probably can be set even lower as ESP_33 is sent also when onChange event occurs with min. timeout 20ms.
 #define WATCHDOG_TIMEOUT WDTO_500MS
 
-const unsigned int ESP_33_CAN_ID = 0x1AB;
-const unsigned int ESP_33_BROADCAST_TIME_MS = 200; // Standard time for this signal
-const byte ESP_33_MAX_RETRY_COUNT = 7;             // After failed attempts arduino will reboot
+// Standard time for this signal
+#define ESP_33_BROADCAST_TIME_MS 200
 
+// After failed attempts arduino will reboot
+#define ESP_33_MAX_RETRY_COUNT 7
+
+const unsigned int ESP_33_CAN_ID = 0x1AB;
 // boolean CycleThroughESP_33_BZ = true;
 unsigned long currentTime = 0, lastSendTime = 0;
 byte canStatus = CAN_FAILINIT;
@@ -331,9 +339,7 @@ void handleSerialInput()
 }
 void setup()
 {
-    // Should be enough time to work and not to overload the canbus or trigger DTC due to missing message
-    // as timeout for this signal is probably smth. like 2000ms
-    // Probably can be set even lower as ESP_33 is sent also when onChange event occurs with min. timeout 20ms.
+
     wdt_enable(WATCHDOG_TIMEOUT);
 
     canStatus = CAN0.begin(MCP_ANY, CAN_500KBPS, MCP_16MHZ);
