@@ -1,0 +1,8 @@
+This project uses the following libraries under the GNU LGPL 2.1 license:
+
+- MCP_CAN_lib (v1.5.1) - https://github.com/coryjfowler/MCP_CAN_lib
+- ArduinoCore-avr (v1.8.6) - https://github.com/arduino/ArduinoCore-avr/
+
+
+These libraries are statically linked into this software. Under the terms of the LGPL 2.1 license, 
+users have the right to replace or modify these libraries. 
