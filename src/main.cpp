@@ -1,7 +1,7 @@
 /*
-    ESP_33 Emulator
+    ESP_33 Emulator v. 0.2 INDEV
 
-    Copyright (c) 2024 by lols11
+    Copyright (c) 2025 by lols11
     Contact: <contact@matbogucki.pl>
     GitHub: https://github.com/lols11
 
@@ -21,18 +21,18 @@
 #include <SPI.h>
 #include <avr/wdt.h>
 
-#define DEVELOPMENT_MODE true
+#define DEVELOPMENT_MODE false
 
 // Should be enough time to work and not to overload the canbus or trigger DTC due to missing message
 // as timeout for this signal is probably smth. like 2000ms
 // Probably can be set even lower as ESP_33 is sent also when onChange event occurs with min. timeout 20ms.
-#define WATCHDOG_TIMEOUT WDTO_500MS
+#define WATCHDOG_TIMEOUT WDTO_4S
 
 // Standard time for this signal
 #define ESP_33_BROADCAST_TIME_MS 200
 
 // After failed attempts arduino will reboot
-#define ESP_33_MAX_RETRY_COUNT 7
+#define ESP_33_MAX_RETRY_COUNT 10
 
 const unsigned int ESP_33_CAN_ID = 0x1AB;
 // boolean CycleThroughESP_33_BZ = true;
@@ -125,8 +125,6 @@ static void setESP_33_BZ(uint8_t value)
     }
 
     esp_33[1] = (esp_33[1] & 0xF0) | (value & 0x0F);
-    Serial.print(F("ESP_33_BZ set to: "));
-    Serial.println(value);
 }
 
 static void addToCounterESP_33_BZ()
@@ -175,15 +173,13 @@ static void setESC_Prefill_aktiv(boolean value)
     esp_33[4] &= 0b11111110;
 }
 
-unsigned int xor_checksum(const uint8_t *d)
+uint8_t xor_checksum(const uint8_t *d)
 {
     uint8_t checksum = 0;
-
     for (size_t i = 1; i < 8; i++)
     {
         checksum ^= d[i];
     }
-
     return checksum;
 }
 
@@ -194,7 +190,7 @@ boolean sendESP_33()
 
     esp_33[0] = xor_checksum(esp_33);
     byte status = CAN0.sendMsgBuf(ESP_33_CAN_ID, 0, 8, esp_33);
-
+    //Serial.println(status);
     return status == CAN_OK;
 }
 
@@ -237,26 +233,61 @@ void handleSerialInput()
 
     if (command.equalsIgnoreCase("S"))
     {
-        Serial.println("ESP_33_CHK: " + xor_checksum(esp_33));
-        Serial.println("ESP_33_BZ: " + getESP_33_BZ());
-        Serial.println("ESC_Warnruck_aktiv: " + getESC_Warnruck_aktiv());
-        Serial.println("ESC_Prefill_aktiv: " + getESC_Prefill_aktiv());
-        Serial.println("ESC_Verz_Reg_aktiv: " + getESC_Verz_Reg_aktiv());
-        Serial.println("ESC_Verz_Reg_nicht_verfuegbar: " + getESC_Verz_Reg_nicht_verfuegbar());
-        Serial.println("ESC_Fahrer_Bremsdruck_bestimmend: " + getESC_Fahrer_Bremsdruck_bestimmend());
+        Serial.println(F("===== ESP_33 Status ====="));
+
+        // XOR-checksum
+        uint8_t checksum = xor_checksum(esp_33);
+        Serial.print(F("ESP_33_CHK: "));
+        Serial.println(checksum, DEC); // Wyświetlanie w formacie heksadecymalnym
+
+        // ESP_33_BZ
+        uint8_t bzValue = getESP_33_BZ();
+        Serial.print(F("ESP_33_BZ: "));
+        Serial.println(bzValue);
+
+        // ESC_Warnruck_aktiv
+        uint8_t warnruckValue = getESC_Warnruck_aktiv();
+        Serial.print(F("ESC_Warnruck_aktiv: "));
+        Serial.println(warnruckValue);
+
+        // ESC_Prefill_aktiv
+        bool prefillValue = getESC_Prefill_aktiv();
+        Serial.print(F("ESC_Prefill_aktiv: "));
+        Serial.println(prefillValue);
+
+        // ESC_Verz_Reg_aktiv
+        uint8_t verzRegValue = getESC_Verz_Reg_aktiv();
+        Serial.print(F("ESC_Verz_Reg_aktiv: "));
+        Serial.println(verzRegValue);
+
+        // ESC_Verz_Reg_nicht_verfuegbar
+        bool verzNichtValue = getESC_Verz_Reg_nicht_verfuegbar();
+        Serial.print(F("ESC_Verz_Reg_nicht_verfuegbar: "));
+        Serial.println(verzNichtValue);
+
+        // ESC_Fahrer_Bremsdruck_bestimmend
+        bool bremsdruckValue = getESC_Fahrer_Bremsdruck_bestimmend();
+        Serial.print(F("ESC_Fahrer_Bremsdruck_bestimmend: "));
+        Serial.println(bremsdruckValue);
+
         return;
     }
 
-    if (command.startsWith("1"))
+    if (command.equalsIgnoreCase("1"))
     {
-        Serial.println("Wirte value 0-15: ");
+        Serial.println(F("Podaj wartość dla ESP_33_BZ (0-15):"));
         while (Serial.available() == 0)
+            ; // Oczekiwanie na dane
+        int value = Serial.parseInt();
+        if (value >= 0 && value <= 15)
         {
-            ;
+            setESP_33_BZ(value);
+            Serial.println(String("ESP_33_BZ ustawione na: ") + String(value));
         }
-
-        setESP_33_BZ(Serial.read());
-        Serial.println("ok");
+        else
+        {
+            Serial.println(F("Błąd: Wartość poza zakresem (0-15)."));
+        }
         return;
     }
     //  if (command.startsWith("2"))
@@ -265,93 +296,79 @@ void handleSerialInput()
     //     Serial.println("CycleThroughESP_33_BZ set to: " + CycleThroughESP_33_BZ);
     //    return;
     // }
-    if (command.startsWith("3"))
+    if (command.equalsIgnoreCase("3"))
     {
-        Serial.println(F("Wirte value 0-9: "));
-        Serial.println(F("no_activity"));
-        Serial.println(F("Activity_by_AWV"));
-        Serial.println(F("Activity_by_vFGS"));
-        Serial.println(F("Activity_by_RCTA"));
-        Serial.println(F("Activity_by_FCWO"));
-        Serial.println(F("Activity_by_FCWP"));
-        Serial.println(F("Activity_by_EA"));
-        Serial.println(F("Activity_by_PCF"));
-        Serial.println(F("Activity_by_KAS"));
-        Serial.println(F("Activity_by_AGW"));
-
+        Serial.println(F("Podaj wartość dla ESC_Warnruck_aktiv (0-9):"));
         while (Serial.available() == 0)
+            ; // Oczekiwanie na dane
+        int value = Serial.parseInt();
+        if (value >= 0 && value <= 9)
         {
-            ;
+            setESC_Warnruck_aktiv(value);
+            Serial.println(String("ESC_Warnruck_aktiv ustawione na: ") + String(value));
         }
-        setESC_Warnruck_aktiv(Serial.read());
+        else
+        {
+            Serial.println(F("Błąd: Wartość poza zakresem (0-9)."));
+        }
         return;
     }
 
-    if (command.startsWith("5"))
+    if (command.equalsIgnoreCase("5"))
     {
         bool status = !getESC_Prefill_aktiv();
-        Serial.println("ESC_Prefill_aktiv set to: " + status);
         setESC_Prefill_aktiv(status);
+        Serial.println(String("ESC_Prefill_aktiv ustawione na: ") + String(status));
         return;
     }
 
-    if (command.startsWith("9"))
+    // Obsługa komendy "9" (Ustawienie ESC_Verz_Reg_aktiv)
+    if (command.equalsIgnoreCase("9"))
     {
-        Serial.println(F("0: keine_Aktivitaet"));
-        Serial.println(F("1: Aktivitaet_TB_durch_AWV"));
-        Serial.println(F("2: Aktivitaet_ZB_durch_AWV"));
-        Serial.println(F("3: Aktivitaet_durch_vFGS"));
-        Serial.println(F("4: Aktivitaet_durch_TSK"));
-        Serial.println(F("5: Aktivitaet_durch_RCTA"));
-        Serial.println(F("6: Aktivitaet_durch_PLA_IPA"));
-        Serial.println(F("7: Aktivitaet_durch_STA"));
-        Serial.println(F("8: Aktivitaet_durch_ARA"));
-        Serial.println(F("9: Aktivitaet_durch_MKB"));
-        Serial.println(F("10: Aktivitaet_durch_BFF"));
-        Serial.println(F("11: Aktivitaet_durch_EA"));
-        Serial.println(F("12: Aktivitaet_durch_PCF"));
-        Serial.println(F("13: reserviert"));
-        Serial.println(F("14: Initialisierung"));
-
+        Serial.println(F("Podaj wartość dla ESC_Verz_Reg_aktiv (0-15):"));
         while (Serial.available() == 0)
+            ; // Oczekiwanie na dane
+        int value = Serial.parseInt();
+        if (value >= 0 && value <= 15)
         {
-            ;
+            setESC_Verz_Reg_aktiv(value);
+            Serial.println(String("ESC_Verz_Reg_aktiv ustawione na: ") + String(value));
         }
-        setESC_Verz_Reg_aktiv(Serial.read());
+        else
+        {
+            Serial.println(F("Błąd: Wartość poza zakresem (0-15)."));
+        }
         return;
     }
 
-    if (command.startsWith("10"))
+    if (command.equalsIgnoreCase("10"))
     {
         bool status = !getESC_Verz_Reg_nicht_verfuegbar();
-        Serial.println("ESC_Verz_Reg_TB_nicht_verfuegbar set to: " + status);
         setESC_Verz_Reg_nicht_verfuegbar(status);
+        Serial.println(String("ESC_Verz_Reg_nicht_verfuegbar ustawione na: ") + String(status));
         return;
     }
 
-    if (command.startsWith("16"))
+    if (command.equalsIgnoreCase("16"))
     {
         bool status = !getESC_Fahrer_Bremsdruck_bestimmend();
-        Serial.println("ESC_Fahrer_Bremsdruck_bestimmend set to: " + status);
         setESC_Fahrer_Bremsdruck_bestimmend(status);
+        Serial.println(String("ESC_Fahrer_Bremsdruck_bestimmend ustawione na: ") + String(status));
         return;
     }
+    Serial.println(F("Nieznana komenda. Wpisz 'H' dla pomocy."));
 }
 void setup()
 {
 
     wdt_enable(WATCHDOG_TIMEOUT);
 
-    canStatus = CAN0.begin(MCP_ANY, CAN_500KBPS, MCP_16MHZ);
+    canStatus = CAN0.begin(MCP_ANY, CAN_500KBPS, MCP_8MHZ);
 
     if (DEVELOPMENT_MODE)
     {
-        wdt_enable(WDTO_1S);
         Serial.begin(115200);
         Serial.setTimeout(150);
-        Serial.println("CS: ");
-        Serial.print(xor_checksum(esp_33));
-        esp_33[0] = xor_checksum(esp_33);
         if (canStatus == CAN_OK)
             Serial.println(F("MCP2515 Initialized Successfully!"));
         else
@@ -370,21 +387,28 @@ void setup()
 void loop()
 {
     currentTime = millis();
-    if (!sendESP_33())
-    {
-        failedRetryCount++;
-    }
-    else
-    {
-        failedRetryCount = 0;
-    }
 
-    lastSendTime = currentTime;
-
-    // Reboot if maximum retry count is reached as we are close to the DTC timeout
-    if (failedRetryCount >= ESP_33_MAX_RETRY_COUNT)
+    // Check if it's time to send the broadcast
+    if (currentTime - lastSendTime >= ESP_33_BROADCAST_TIME_MS)
     {
-        reboot();
+        if (!sendESP_33())
+        {
+            failedRetryCount++;
+        }
+        else
+        {
+            failedRetryCount = 0;
+        }
+
+        lastSendTime = currentTime;
+
+        // Reboot if maximum retry count is reached as we are close to the DTC timeout
+        if (failedRetryCount >= ESP_33_MAX_RETRY_COUNT)
+        {
+            Serial.println("Maximum retry count reached. Rebooting...");
+            delay(5);
+            reboot();
+        }
     }
 
     if (DEVELOPMENT_MODE && Serial.available() > 0)
