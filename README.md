@@ -1,4 +1,5 @@
 # ESP_33 Emulator
+![License](https://img.shields.io/static/v1?label=License&message=MIT&color=green)
 > [!CAUTION]
 > This software is intended for OFF-ROAD USE ONLY.
 
