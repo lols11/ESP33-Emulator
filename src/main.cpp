@@ -91,22 +91,22 @@ static void setESC_Verz_Reg_nicht_verfuegbar(boolean value)
 
 static uint8_t getESC_Verz_Reg_aktiv()
 {
-    // Pobiera wartość bitów 4-7 w bajcie 4
+    // Gets the value of bits 4-7 in byte 4
     return (esp_33[4] & 0b11110000) >> 4;
 }
 
 static void setESC_Verz_Reg_aktiv(uint8_t value)
 {
-    if (value > 15) // Maksymalna wartość dla 4-bitowego pola
+    if (value > 15) // Maximum value for a 4-bit field
     {
         Serial.println("ESC_Verz_Reg_aktiv: Value out of range (0-15).");
         return;
     }
 
-    // Wyczyszczenie bitów 4-7
+    // Clearing bits 4-7
     esp_33[4] &= 0b00001111;
 
-    // Ustawienie nowej wartości na bitach 4-7
+    // Set a new value to bits 4-7
     esp_33[4] |= (value << 4);
 }
 
@@ -197,7 +197,7 @@ boolean sendESP_33()
 void printHelp()
 {
     Serial.println(F("===== ESP_33 Emulator ====="));
-    Serial.println(F("====== (c) by lols11 ======"));
+    Serial.println(F("======== by lols11 ========"));
     Serial.println(F("WARNING! As settings wait for input it may\ngenerate DTC errors"));
     Serial.println(F("H. Help"));
     Serial.println(F("S. Status"));
@@ -238,7 +238,7 @@ void handleSerialInput()
         // XOR-checksum
         uint8_t checksum = xor_checksum(esp_33);
         Serial.print(F("ESP_33_CHK: "));
-        Serial.println(checksum, DEC); // Wyświetlanie w formacie heksadecymalnym
+        Serial.println(checksum, DEC); 
 
         // ESP_33_BZ
         uint8_t bzValue = getESP_33_BZ();
@@ -277,7 +277,7 @@ void handleSerialInput()
     {
         Serial.println(F("Podaj wartość dla ESP_33_BZ (0-15):"));
         while (Serial.available() == 0)
-            ; // Oczekiwanie na dane
+            ; // Wait for data
         int value = Serial.parseInt();
         if (value >= 0 && value <= 15)
         {
@@ -300,7 +300,7 @@ void handleSerialInput()
     {
         Serial.println(F("Podaj wartość dla ESC_Warnruck_aktiv (0-9):"));
         while (Serial.available() == 0)
-            ; // Oczekiwanie na dane
+            ; // Wait for data
         int value = Serial.parseInt();
         if (value >= 0 && value <= 9)
         {
@@ -322,12 +322,12 @@ void handleSerialInput()
         return;
     }
 
-    // Obsługa komendy "9" (Ustawienie ESC_Verz_Reg_aktiv)
+    
     if (command.equalsIgnoreCase("9"))
     {
         Serial.println(F("Podaj wartość dla ESC_Verz_Reg_aktiv (0-15):"));
         while (Serial.available() == 0)
-            ; // Oczekiwanie na dane
+            ; // Wait for data
         int value = Serial.parseInt();
         if (value >= 0 && value <= 15)
         {
@@ -356,7 +356,7 @@ void handleSerialInput()
         Serial.println(String("ESC_Fahrer_Bremsdruck_bestimmend ustawione na: ") + String(status));
         return;
     }
-    Serial.println(F("Nieznana komenda. Wpisz 'H' dla pomocy."));
+    Serial.println(F("Unknown command. Type 'H' for help."));
 }
 void setup()
 {
