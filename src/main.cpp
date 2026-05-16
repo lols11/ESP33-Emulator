@@ -1,7 +1,6 @@
 /*
     ESP_33 Emulator v. 0.2 INDEV
-
-    Copyright (c) 2025 by lols11
+    by lols11
     Contact: <contact@matbogucki.pl>
     GitHub: https://github.com/lols11
 
