@@ -274,18 +274,18 @@ void handleSerialInput()
 
     if (command.equalsIgnoreCase("1"))
     {
-        Serial.println(F("Podaj wartość dla ESP_33_BZ (0-15):"));
+        Serial.println(F("Enter a value for ESP_33_BZ (0-15):"));
         while (Serial.available() == 0)
             ; // Wait for data
         int value = Serial.parseInt();
         if (value >= 0 && value <= 15)
         {
             setESP_33_BZ(value);
-            Serial.println(String("ESP_33_BZ ustawione na: ") + String(value));
+            Serial.println(String("ESP_33_BZ set to: ") + String(value));
         }
         else
         {
-            Serial.println(F("Błąd: Wartość poza zakresem (0-15)."));
+            Serial.println(F("Error: Value out of range (0-15)."));
         }
         return;
     }
@@ -297,18 +297,18 @@ void handleSerialInput()
     // }
     if (command.equalsIgnoreCase("3"))
     {
-        Serial.println(F("Podaj wartość dla ESC_Warnruck_aktiv (0-9):"));
+        Serial.println(F("Enter a value for ESC_Warnruck_aktiv (0-9):"));
         while (Serial.available() == 0)
             ; // Wait for data
         int value = Serial.parseInt();
         if (value >= 0 && value <= 9)
         {
             setESC_Warnruck_aktiv(value);
-            Serial.println(String("ESC_Warnruck_aktiv ustawione na: ") + String(value));
+            Serial.println(String("ESC_Warnruck_aktiv set to: ") + String(value));
         }
         else
         {
-            Serial.println(F("Błąd: Wartość poza zakresem (0-9)."));
+            Serial.println(F("Error: Value out of range (0-9)."));
         }
         return;
     }
@@ -317,25 +317,25 @@ void handleSerialInput()
     {
         bool status = !getESC_Prefill_aktiv();
         setESC_Prefill_aktiv(status);
-        Serial.println(String("ESC_Prefill_aktiv ustawione na: ") + String(status));
+        Serial.println(String("ESC_Prefill_aktiv set to: ") + String(status));
         return;
     }
 
     
     if (command.equalsIgnoreCase("9"))
     {
-        Serial.println(F("Podaj wartość dla ESC_Verz_Reg_aktiv (0-15):"));
+        Serial.println(F("Enter a value for ESC_Verz_Reg_aktiv (0-15):"));
         while (Serial.available() == 0)
             ; // Wait for data
         int value = Serial.parseInt();
         if (value >= 0 && value <= 15)
         {
             setESC_Verz_Reg_aktiv(value);
-            Serial.println(String("ESC_Verz_Reg_aktiv ustawione na: ") + String(value));
+            Serial.println(String("ESC_Verz_Reg_aktiv set to: ") + String(value));
         }
         else
         {
-            Serial.println(F("Błąd: Wartość poza zakresem (0-15)."));
+            Serial.println(F("Error: Value out of range (0-15)."));
         }
         return;
     }
@@ -344,7 +344,7 @@ void handleSerialInput()
     {
         bool status = !getESC_Verz_Reg_nicht_verfuegbar();
         setESC_Verz_Reg_nicht_verfuegbar(status);
-        Serial.println(String("ESC_Verz_Reg_nicht_verfuegbar ustawione na: ") + String(status));
+        Serial.println(String("ESC_Verz_Reg_nicht_verfuegbar set to: ") + String(status));
         return;
     }
 
@@ -352,7 +352,7 @@ void handleSerialInput()
     {
         bool status = !getESC_Fahrer_Bremsdruck_bestimmend();
         setESC_Fahrer_Bremsdruck_bestimmend(status);
-        Serial.println(String("ESC_Fahrer_Bremsdruck_bestimmend ustawione na: ") + String(status));
+        Serial.println(String("ESC_Fahrer_Bremsdruck_bestimmend set to: ") + String(status));
         return;
     }
     Serial.println(F("Unknown command. Type 'H' for help."));
